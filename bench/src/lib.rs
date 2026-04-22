@@ -1,4 +1,5 @@
-use criterion::{measurement::Measurement, BenchmarkGroup, BenchmarkId, Criterion, Throughput};
+use criterion::{BenchmarkGroup, BenchmarkId, Criterion, Throughput, measurement::Measurement};
+use simdutf8::avx512_dfa::check_utf8 as avx512_dfa_utf8;
 use simdutf8::basic::from_utf8 as basic_from_utf8;
 use simdutf8::compat::from_utf8 as compat_from_utf8;
 
@@ -30,6 +31,7 @@ pub enum BenchFn {
     BasicNoInline,
     Compat,
     Std,
+    Avx512Dfa,
 
     #[cfg(feature = "simdjson")]
     Simdjson,
@@ -198,6 +200,15 @@ fn bench_input<M: Measurement>(
                 &input,
                 |b, &slice| {
                     b.iter(|| assert_eq!(std_from_utf8(slice).is_ok(), expected_ok));
+                },
+            );
+        }
+        BenchFn::Avx512Dfa => {
+            group.bench_with_input(
+                BenchmarkId::from_parameter(format!("{:06}", input.len())),
+                &input,
+                |b, &slice| {
+                    b.iter(|| assert_eq!(avx512_dfa_utf8(slice), expected_ok));
                 },
             );
         }

@@ -136,6 +136,7 @@
 //! See Validating UTF-8 In Less Than One Instruction Per Byte, Software: Practice and Experience 51 (5), 2021
 //! <https://arxiv.org/abs/2010.03090>
 
+pub mod avx512_dfa;
 pub mod basic;
 pub mod compat;
 mod implementation;
