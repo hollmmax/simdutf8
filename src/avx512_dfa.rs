@@ -71,20 +71,26 @@ pub fn check_utf8(data: &[u8]) -> bool {
         // vector separately and then a permute to join them together. This should result in lower
         // latency on most CPUs, but likely worse throughput.
         let merge_shuffle = _mm512_set_epi64(15, 13, 11, 9, 7, 5, 3, 1);
-        let merge_mask = _mm512_set_epi64(
-            0x7070707070707070u64 as i64,
-            0x6060606060606060u64 as i64,
-            0x5050505050505050u64 as i64,
-            0x4040404040404040u64 as i64,
-            0x3030303030303030u64 as i64,
-            0x2020202020202020u64 as i64,
-            0x1010101010101010u64 as i64,
-            0x0000000000000000u64 as i64,
-        );
+        // let merge_mask = _mm512_set_epi64(
+        //     0x7070707070707070u64 as i64,
+        //     0x6060606060606060u64 as i64,
+        //     0x5050505050505050u64 as i64,
+        //     0x4040404040404040u64 as i64,
+        //     0x3030303030303030u64 as i64,
+        //     0x2020202020202020u64 as i64,
+        //     0x1010101010101010u64 as i64,
+        //     0x0000000000000000u64 as i64,
+        // );
+        // let merge_adjecent = |a: __m512i, b: __m512i| {
+        //     let idx = _mm512_permutex2var_epi64(a, merge_shuffle, b);
+        //     let idx = _mm512_or_epi64(idx, merge_mask);
+        //     _mm512_permutex2var_epi8(a, idx, b)
+        // };
+
         let merge_adjecent = |a: __m512i, b: __m512i| {
-            let idx = _mm512_permutex2var_epi64(a, merge_shuffle, b);
-            let idx = _mm512_or_epi64(idx, merge_mask);
-            _mm512_permutex2var_epi8(a, idx, b)
+            let a = _mm512_shuffle_epi8(a, a);
+            let b = _mm512_shuffle_epi8(b, b);
+            _mm512_permutex2var_epi64(a, merge_shuffle, b)
         };
 
         let (bulk, remainder) = data.as_chunks::<64>();
