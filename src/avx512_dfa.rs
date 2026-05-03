@@ -45,22 +45,26 @@ pub fn check_utf8(data: &[u8]) -> bool {
         let process_chunk = |chunk: &[u8; 64]| {
             let chunk = _mm512_loadu_epi8(chunk.as_ptr() as *const i8);
             let mask = _mm512_movepi8_mask(chunk);
-            let classes = _mm512_maskz_permutex2var_epi8(mask, c_lut1, chunk, c_lut2);
-            let transitions_0 = _mm512_permutex2var_epi64(t_lut1, classes, t_lut2);
-            let transitions_1 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 8), t_lut2);
-            let transitions_2 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 16), t_lut2);
-            let transitions_3 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 24), t_lut2);
-            let transitions_4 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 32), t_lut2);
-            let transitions_5 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 40), t_lut2);
-            let transitions_6 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 48), t_lut2);
-            let transitions_7 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 56), t_lut2);
-            let transitions_01 = _mm512_shuffle_epi8(transitions_0, _mm512_or_epi64(transitions_1, shuffle_offset));
-            let transitions_23 = _mm512_shuffle_epi8(transitions_2, _mm512_or_epi64(transitions_3, shuffle_offset));
-            let transitions_45 = _mm512_shuffle_epi8(transitions_4, _mm512_or_epi64(transitions_5, shuffle_offset));
-            let transitions_67 = _mm512_shuffle_epi8(transitions_6, _mm512_or_epi64(transitions_7, shuffle_offset));
-            let transitions_0123 = _mm512_shuffle_epi8(transitions_01, _mm512_or_epi64(transitions_23, shuffle_offset));
-            let transitions_4567 = _mm512_shuffle_epi8(transitions_45, _mm512_or_epi64(transitions_67, shuffle_offset));
-            _mm512_shuffle_epi8(transitions_0123, _mm512_or_epi64(transitions_4567, shuffle_offset))
+            if mask == 0 {
+                _mm512_set1_epi64(T_LUT[0] as i64)
+            } else {
+                let classes = _mm512_maskz_permutex2var_epi8(mask, c_lut1, chunk, c_lut2);
+                let transitions_0 = _mm512_permutex2var_epi64(t_lut1, classes, t_lut2);
+                let transitions_1 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 8), t_lut2);
+                let transitions_2 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 16), t_lut2);
+                let transitions_3 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 24), t_lut2);
+                let transitions_4 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 32), t_lut2);
+                let transitions_5 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 40), t_lut2);
+                let transitions_6 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 48), t_lut2);
+                let transitions_7 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 56), t_lut2);
+                let transitions_01 = _mm512_shuffle_epi8(transitions_0, _mm512_or_epi64(transitions_1, shuffle_offset));
+                let transitions_23 = _mm512_shuffle_epi8(transitions_2, _mm512_or_epi64(transitions_3, shuffle_offset));
+                let transitions_45 = _mm512_shuffle_epi8(transitions_4, _mm512_or_epi64(transitions_5, shuffle_offset));
+                let transitions_67 = _mm512_shuffle_epi8(transitions_6, _mm512_or_epi64(transitions_7, shuffle_offset));
+                let transitions_0123 = _mm512_shuffle_epi8(transitions_01, _mm512_or_epi64(transitions_23, shuffle_offset));
+                let transitions_4567 = _mm512_shuffle_epi8(transitions_45, _mm512_or_epi64(transitions_67, shuffle_offset));
+                _mm512_shuffle_epi8(transitions_0123, _mm512_or_epi64(transitions_4567, shuffle_offset))
+            }
         };
 
         // NOTE: Merging can be done using 2 shuffles to perform a horizontal reduction in each
