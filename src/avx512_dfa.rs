@@ -12,22 +12,22 @@ static C_LUT: [u8; 128] = [
     12, 12, 12, 12,
 ];
 static T_LUT: [u64; 16] = [
-    0x06060606060600,
-    0x06060604040201,
-    0x06060605050201,
-    0x06060605050301,
-    0x06060606060606,
-    0x06060606060006,
-    0x06060600060606,
-    0x06060600000606,
-    0x06060606000606,
-    0x06000606060606,
-    0x06000006060606,
-    0x06060006060606,
-    0x06060606060606,
-    0x00000000000000,
-    0x00000000000000,
-    0x00000000000000,
+    0x06_06_06_06_06_06_00,
+    0x06_06_06_04_04_02_01,
+    0x06_06_06_05_05_02_01,
+    0x06_06_06_05_05_03_01,
+    0x06_06_06_06_06_06_06,
+    0x06_06_06_06_06_00_06,
+    0x06_06_06_00_06_06_06,
+    0x06_06_06_00_00_06_06,
+    0x06_06_06_06_00_06_06,
+    0x06_00_06_06_06_06_06,
+    0x06_00_00_06_06_06_06,
+    0x06_06_00_06_06_06_06,
+    0x06_06_06_06_06_06_06,
+    0x00_00_00_00_00_00_00,
+    0x00_00_00_00_00_00_00,
+    0x00_00_00_00_00_00_00,
 ];
 
 /// # Safety
@@ -39,6 +39,8 @@ pub fn check_utf8(data: &[u8]) -> bool {
         let c_lut2 = _mm512_loadu_epi8(&C_LUT[64] as *const u8 as *const i8);
         let t_lut1 = _mm512_loadu_epi64(&T_LUT[0] as *const u64 as *const i64);
         let t_lut2 = _mm512_loadu_epi64(&T_LUT[8] as *const u64 as *const i64);
+        let s_lut1 = _mm512_slli_epi64(t_lut1, 3);
+        let s_lut2 = _mm512_slli_epi64(t_lut2, 3);
         let shuffle_offset = _mm512_maskz_set1_epi32(_cvtu32_mask16(0xcccc), 0x08080808);
 
         #[rustfmt::skip]
@@ -48,22 +50,39 @@ pub fn check_utf8(data: &[u8]) -> bool {
             if mask == 0 {
                 _mm512_set1_epi64(T_LUT[0] as i64)
             } else {
+                // let classes = _mm512_maskz_permutex2var_epi8(mask, c_lut1, chunk, c_lut2);
+                // let transitions_0 = _mm512_permutex2var_epi64(t_lut1, classes, t_lut2);
+                // let transitions_1 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 8), t_lut2);
+                // let transitions_2 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 16), t_lut2);
+                // let transitions_3 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 24), t_lut2);
+                // let transitions_4 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 32), t_lut2);
+                // let transitions_5 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 40), t_lut2);
+                // let transitions_6 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 48), t_lut2);
+                // let transitions_7 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 56), t_lut2);
+                // let transitions_01 = _mm512_shuffle_epi8(transitions_0, _mm512_or_epi64(transitions_1, shuffle_offset));
+                // let transitions_23 = _mm512_shuffle_epi8(transitions_2, _mm512_or_epi64(transitions_3, shuffle_offset));
+                // let transitions_45 = _mm512_shuffle_epi8(transitions_4, _mm512_or_epi64(transitions_5, shuffle_offset));
+                // let transitions_67 = _mm512_shuffle_epi8(transitions_6, _mm512_or_epi64(transitions_7, shuffle_offset));
+                // let transitions_0123 = _mm512_shuffle_epi8(transitions_01, _mm512_or_epi64(transitions_23, shuffle_offset));
+                // let transitions_4567 = _mm512_shuffle_epi8(transitions_45, _mm512_or_epi64(transitions_67, shuffle_offset));
+                // _mm512_shuffle_epi8(transitions_0123, _mm512_or_epi64(transitions_4567, shuffle_offset))
                 let classes = _mm512_maskz_permutex2var_epi8(mask, c_lut1, chunk, c_lut2);
-                let transitions_0 = _mm512_permutex2var_epi64(t_lut1, classes, t_lut2);
-                let transitions_1 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 8), t_lut2);
-                let transitions_2 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 16), t_lut2);
-                let transitions_3 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 24), t_lut2);
-                let transitions_4 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 32), t_lut2);
-                let transitions_5 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 40), t_lut2);
-                let transitions_6 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 48), t_lut2);
-                let transitions_7 = _mm512_permutex2var_epi64(t_lut1, _mm512_srli_epi64(classes, 56), t_lut2);
-                let transitions_01 = _mm512_shuffle_epi8(transitions_0, _mm512_or_epi64(transitions_1, shuffle_offset));
-                let transitions_23 = _mm512_shuffle_epi8(transitions_2, _mm512_or_epi64(transitions_3, shuffle_offset));
-                let transitions_45 = _mm512_shuffle_epi8(transitions_4, _mm512_or_epi64(transitions_5, shuffle_offset));
-                let transitions_67 = _mm512_shuffle_epi8(transitions_6, _mm512_or_epi64(transitions_7, shuffle_offset));
-                let transitions_0123 = _mm512_shuffle_epi8(transitions_01, _mm512_or_epi64(transitions_23, shuffle_offset));
-                let transitions_4567 = _mm512_shuffle_epi8(transitions_45, _mm512_or_epi64(transitions_67, shuffle_offset));
-                _mm512_shuffle_epi8(transitions_0123, _mm512_or_epi64(transitions_4567, shuffle_offset))
+                let transitions_0 = _mm512_permutex2var_epi64(s_lut1, classes, s_lut2);
+                let transitions_1 = _mm512_permutex2var_epi64(s_lut1, _mm512_srli_epi64(classes, 8), s_lut2);
+                let transitions_2 = _mm512_permutex2var_epi64(s_lut1, _mm512_srli_epi64(classes, 16), s_lut2);
+                let transitions_3 = _mm512_permutex2var_epi64(s_lut1, _mm512_srli_epi64(classes, 24), s_lut2);
+                let transitions_4 = _mm512_permutex2var_epi64(s_lut1, _mm512_srli_epi64(classes, 32), s_lut2);
+                let transitions_5 = _mm512_permutex2var_epi64(s_lut1, _mm512_srli_epi64(classes, 40), s_lut2);
+                let transitions_6 = _mm512_permutex2var_epi64(s_lut1, _mm512_srli_epi64(classes, 48), s_lut2);
+                let transitions_7 = _mm512_permutex2var_epi64(s_lut1, _mm512_srli_epi64(classes, 56), s_lut2);
+                let transitions_01 = _mm512_multishift_epi64_epi8(transitions_1, transitions_0);
+                let transitions_23 = _mm512_multishift_epi64_epi8(transitions_3, transitions_2);
+                let transitions_45 = _mm512_multishift_epi64_epi8(transitions_5, transitions_4);
+                let transitions_67 = _mm512_multishift_epi64_epi8(transitions_7, transitions_6);
+                let transitions_0123 = _mm512_multishift_epi64_epi8(transitions_23, transitions_01);
+                let transitions_4567 = _mm512_multishift_epi64_epi8(transitions_67, transitions_45);
+                let transitions_01234567 =_mm512_multishift_epi64_epi8(transitions_4567, transitions_0123);
+                _mm512_srli_epi64(transitions_01234567, 3)
             }
         };
 
